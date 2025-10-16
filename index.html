@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualiseur de Division Euclidienne (Mode Pédagogique)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f0f4f8;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .control-and-action-panel {
+            width: 100%;
+            max-width: 1000px;
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column; 
+            gap: 20px; 
+            justify-content: center;
+            align-items: center;
+        }
+
+        #inputPanel {
+            background-color: #1e3a8a;
+            color: white;
+            padding: 20px 30px;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+            width: 100%;
+            max-width: 650px; 
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        #actionButtonsPanel {
+            width: 100%;
+            max-width: 650px;
+            display: flex;
+            justify-content: space-evenly;
+            gap: 15px; 
+        }
+        
+        @media (max-width: 800px) {
+            #inputPanel {
+                max-width: none;
+                flex-direction: column;
+                gap: 15px;
+            }
+            .input-group {
+                width: 100%;
+                justify-content: space-between;
+            }
+            #actionButtonsPanel {
+                flex-direction: column;
+                align-items: stretch;
+                max-width: 300px; 
+            }
+        }
+
+        .control-panel label {
+            font-weight: 600;
+        }
+        input[type="number"], button {
+            padding: 12px 18px;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: all 0.2s;
+            outline: none;
+        }
+        input[type="number"] {
+            border: 2px solid #3b82f6;
+            color: #1e3a8a;
+            width: 80px;
+            text-align: center;
+        }
+        #btnInitialiser, #btnGenererProbleme, #btnEtape {
+            cursor: pointer;
+            font-weight: 700;
+            color: white;
+            border: none;
+            box-shadow: 0 4px;
+        }
+        #btnInitialiser {
+            background-color: #3b82f6; 
+            box-shadow: 0 4px #2563eb;
+        }
+        #btnInitialiser:hover:enabled {
+            background-color: #2563eb;
+            box-shadow: 0 2px #1e40af;
+            transform: translateY(2px);
+        }
+        #btnGenererProbleme {
+            background-color: #f59e0b; 
+            box-shadow: 0 4px #d97706;
+            padding: 15px 20px; 
+            white-space: nowrap;
+            width: 100%; 
+        }
+        #btnGenererProbleme:hover:enabled {
+            background-color: #d97706;
+            box-shadow: 0 2px #b45309;
+            transform: translateY(2px);
+        }
+
+        #btnEtape {
+            background-color: #10b981; 
+            box-shadow: 0 4px #059669;
+            font-size: 1.15rem; 
+            padding: 15px 20px; 
+            width: 100%;
+        }
+        #btnEtape:hover:enabled {
+            background-color: #059669;
+            box-shadow: 0 2px #047857;
+            transform: translateY(2px);
+        }
+        button:disabled {
+            background-color: #9ca3af !important;
+            box-shadow: none !important;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* Conteneur principal pour le dual-view */
+        .main-content-area {
+            width: 100%;
+            max-width: 1400px; 
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+        
+        .division-container {
+            background-color: white;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            border: 1px solid #d1d5db;
+            flex-shrink: 0;
+        }
+        #divisionCanvas {
+            display: block;
+        }
+
+        /* Panneau Pédagogique */
+        .pedagogical-panel {
+            width: 350px; 
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            border: 1px solid #d1d5db;
+            align-self: flex-start;
+            position: sticky;
+            top: 20px;
+            height: fit-content;
+        }
+        
+        .modal {
+            position: fixed; 
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.8);
+            display: none; 
+            justify-content: center;
+            align-items: center;
+            z-index: 50;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+            max-width: 600px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .speech-bubble-inner {
+            background-color: #fef3c7; 
+            border: 1px solid #f59e0b;
+            padding: 15px;
+            border-radius: 0.75em;
+        }
+        
+    </style>
+</head>
+<body>
+
+    <div class="control-and-action-panel">
+        <div id="inputPanel" class="flex flex-col sm:flex-row space-y-4 sm:space-y-0 sm:space-x-6 items-center">
+            <div class="input-group flex items-center space-x-3">
+                <label for="dividende">Dividende (D):</label>
+                <input type="number" id="dividende" value="735" class="text-center">
+            </div>
+            <div class="input-group flex items-center space-x-3">
+                <label for="diviseur">Diviseur (d):</label>
+                <input type="number" id="diviseur" value="5" class="text-center">
+            </div>
+            <button id="btnInitialiser" onclick="initialiserDivision()">Initialiser Division</button>
+        </div>
+
+        <div id="actionButtonsPanel">
+            <button id="btnGenererProbleme" onclick="genererProbleme()">
+                ✨ Générer Problème
+            </button>
+            <button id="btnEtape" disabled onclick="prochaineEtape()">
+                ▶️ Étape suivante
+            </button>
+        </div>
+    </div>
+
+    <div class="main-content-area">
+        <div class="division-container">
+            <canvas id="divisionCanvas" width="1000" height="600"></canvas>
+        </div>
+
+        <div id="pedagogicalPanel" class="pedagogical-panel">
+            <h2 class="text-xl font-bold text-gray-800 mb-4 border-b pb-2">🧠 Leçon en Temps Réel</h2>
+            <div id="etapes-cles" class="space-y-4">
+                <p class="text-sm font-semibold text-indigo-700">🔍 Opération Actuelle:</p>
+                <p id="current-operation" class="text-xl font-extrabold text-blue-800">Cliquez sur "Initialiser Division" pour commencer.</p>
+
+                <p class="text-sm font-semibold text-indigo-700 pt-3 border-t">📖 Principe:</p>
+                <p id="current-principle" class="text-base text-gray-700 italic">Le principe de la division est de trouver combien de fois le Diviseur (d) rentre dans le Dividende (D).</p>
+
+                <p class="text-sm font-semibold text-indigo-700 pt-3 border-t">🎯 Objectif:</p>
+                <p id="current-objective" class="text-base text-gray-700">Travailler sur le chiffre le plus à gauche pour trouver le premier chiffre du Quotient.</p>
+            </div>
+            <div id="euclidean-result" class="mt-8 p-4 bg-indigo-50 rounded-lg border-l-4 border-indigo-500 hidden">
+                <p class="text-lg font-bold text-indigo-800">🎉 RÉSULTAT EUCLIDIEN</p>
+                <p class="text-sm text-indigo-600 mt-2" id="resultat-euclidien-equation">D = d × Q + R</p>
+                <p class="text-xs text-indigo-600 mt-1">où R &lt; d</p>
+            </div>
+        </div>
+    </div>
+    <div class="mt-4 text-gray-500 italic text-sm">
+        Visualisation pas-à-pas de la méthode cumulative.
+    </div>
+
+    <div style="font-family: cursive; font-size: 36px; font-style: italic; color: #666; margin-top: 20px; margin-left: 20px;">
+        G.R.
+    </div>
+
+    <div id="modalProbleme" class="modal">
+        <div class="modal-content">
+            <h3 class="text-2xl font-bold text-amber-700 mb-4 flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6 mr-2">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-6h2v6zm0-8h-2V7h2v2z"/>
+                </svg>
+                Problème Contextuel
+            </h3>
+            <p id="problemeOutput" class="text-lg text-gray-800 text-left p-4 border rounded-lg bg-yellow-50"></p>
+            <button onclick="fermerModal('modalProbleme')" class="mt-6 px-6 py-2 bg-amber-600 hover:bg-amber-700 text-white font-bold rounded-xl shadow-lg transition duration-150">
+                Fermer
+            </button>
+        </div>
+    </div>
+
+    <div id="modalFelicitation" class="modal">
+        <div class="modal-content">
+            <h2 class="text-4xl font-extrabold text-indigo-700 mb-8">✨ Mission accomplie ! ✨</h2>
+            
+            <div class="speech-bubble-container">
+                <div class="speech-bubble">
+                    <div class="speech-bubble-inner">
+                        <p class="text-lg font-semibold text-gray-800" id="savantCitation"></p>
+                        <p class="text-sm italic text-right mt-3 text-yellow-800" id="savantNom"></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8 text-center bg-indigo-50 p-4 rounded-lg border-l-4 border-indigo-500">
+                <p class="text-lg font-bold text-indigo-800" id="resultatDivision"></p>
+                
+                <div class="flex flex-col sm:flex-row justify-center space-y-4 sm:space-y-0 sm:space-x-4 mt-6">
+                    <button onclick="fermerModal('modalFelicitation')" class="px-8 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-lg transition duration-150">
+                        Compris !
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+<script>
+    let canvas, ctx, btnEtape, modalFelicitation, modalProbleme, savantCitation, savantNom, resultatDivision;
+    let problemeOutput, pedagogicalPanel, currentOperation, currentPrinciple, currentObjective, resultatEuclidienEquation, euclideanResultPanel; 
+    
+    // CONSTANTES
+    const TAILLE_ECRITURE = 35;
+    const COULEUR_DIVIDENDE = '#1d4ed8';
+    const COULEUR_DIVISEUR = '#b91c1c';
+    const COULEUR_QUOTIENT = '#059669';
+    const COULEUR_RESTE = '#7e22ce';
+    const COULEUR_POTENCE = '#333333';
+    const COULEUR_FLECHE = '#0088AA'; // Utilisé seulement pour la flèche d'abaissement
+    
+    let dividende = 0;
+    let diviseur = 0;
+    let dividendeStr = "";
+    let etapes = [];
+    let etapeCourante = 0;
+    let sousEtapeCourante = 0; 
+    
+    let yLignePotence = 0;
+    let xPotenceV = 0;
+    let xQuotientBase = 0;
+    const tailleChiffrePx = TAILLE_ECRITURE * 1.3;
+    
+    const Y_START = 80; 
+    const POTENCE_SPACING = 30; 
+    const QUOTIENT_END_SPACING = 30; 
+    const QUOTIENT_START_SPACING = 15; 
+    const espacementVertical = tailleChiffrePx * 2.5;
+
+    const MAX_SOUS_ETAPES_PAR_CYCLE = 6; 
+
+    // Les messages n'ont pas changé mais la logique de lecture a été retirée pour simplifier le code
+    const SAVANT_MESSAGES = [
+        ["Albert Einstein (Physicien)", "« Ce n'est pas que je sois si intelligent, mais je reste plus longtemps sur les problèmes. »"],
+        ["Carl Friedrich Gauss (Mathématicien)", "« Les mathématiques sont la reine des sciences. »"],
+        ["Marie Curie (Scientifique)", "« Rien dans la vie n'est à craindre, tout est à comprendre. »"],
+        ["Thomas Edison (Inventeur)", "« Le génie, c'est 1 % d'inspiration et 99 % de transpiration. »"],
+        ["Isaac Newton (Physicien)", "« La nature se plaît dans la simplicité. »"],
+        ["Léonard de Vinci (Savant)", "« La simplicité est la sophistication suprême. »"],
+        ["Katherine Johnson (Mathématicienne de la NASA)", "« Nous devons apprendre chaque jour, sinon nous reculons. »"],
+    ];
+    
+    // -- Fonctions API (conservées par sécurité si le user veut réintégrer la lecture audio) --
+    async function fetchWithExponentialBackoff(url, options, maxRetries = 5) { /* ... (corps de fonction omis pour concision) ... */ }
+    function base64ToArrayBuffer(base64) { /* ... (corps de fonction omis pour concision) ... */ }
+    function pcmToWav(pcm16, sampleRate) { /* ... (corps de fonction omis pour concision) ... */ }
+    async function lireCitation() { /* ... (corps de fonction omis pour concision) ... */ }
+    // ---------------------------------------------------------------------------------------
+
+    function genererProbleme() {
+        if (!ctx) setupDOMVariables();
+        
+        const d = parseInt(document.getElementById('dividende').value);
+        const v = parseInt(document.getElementById('diviseur').value);
+
+        if (isNaN(d) || isNaN(v) || v <= 0) {
+            alert("Veuillez vérifier les nombres (Diviseur > 0) avant de générer un problème.");
+            return;
+        }
+
+        const problemesParTheme = {
+            fruits: [
+                `Marie a ${d} pommes. Elle veut les partager équitablement entre ${v} amis. Combien de pommes chaque ami recevra-t-il ?`,
+                `Au marché, il y a ${d} oranges à distribuer dans ${v} corbeilles. Combien d'oranges dans chaque corbeille ?`,
+                `Un fermier récolte ${d} fraises qu'il place dans ${v} barquettes. Combien de fraises par barquette ?`,
+            ],
+            bonbons: [
+                `Papa a acheté ${d} bonbons pour les partager entre ses ${v} enfants. Chaque enfant reçoit combien de bonbons ?`,
+                `Une confiserie prépare ${d} caramels à ranger dans ${v} boîtes. Combien de caramels par boîte ?`,
+                `Tom a ${d} chewing-gums à donner à ses ${v} copains. Combien en recevra chaque copain ?`,
+            ],
+            livres: [
+                `Une bibliothèque reçoit ${d} livres neufs à répartir entre ${v} salles. Combien de livres par salle ?`,
+                `Lors d'une vente, ${d} livres sont à mettre sur ${v} étagères. Combien par étagère ?`,
+                `Un professeur distribue ${d} cahiers à ${v} groupes d'élèves. Combien de cahiers par groupe ?`,
+            ],
+            pièces: [
+                `Grand-mère a ${d} pièces de monnaie à donner à ses ${v} petits-enfants. Combien chacun reçoit-il ?`,
+                `Un magasin range ${d} euros en pièces dans ${v} tiroirs. Combien par tiroir en moyenne ?`,
+                `Une association reçoit ${d} jetons à distribuer entre ${v} participants. Combien par participant ?`,
+            ],
+            oeufs: [
+                `Un fermier collecte ${d} œufs à ranger dans ${v} boîtes. Combien d'œufs par boîte ?`,
+                `Au marché, on vend ${d} œufs par lot de ${v}. Combien de lots ?`,
+                `Une école reçoit ${d} œufs pour ${v} ateliers. Combien par atelier ?`,
+            ],
+        };
+
+        const themes = Object.keys(problemesParTheme);
+        const themeAleatoire = themes[Math.floor(Math.random() * themes.length)];
+        const problemes = problemesParTheme[themeAleatoire];
+        const problemeAleatoire = problemes[Math.floor(Math.random() * problemes.length)];
+
+        modalProbleme.style.display = 'flex';
+        problemeOutput.textContent = problemeAleatoire;
+    }
+
+
+    function setupDOMVariables() {
+        canvas = document.getElementById('divisionCanvas');
+        ctx = canvas.getContext('2d');
+        btnEtape = document.getElementById('btnEtape');
+        modalFelicitation = document.getElementById('modalFelicitation');
+        modalProbleme = document.getElementById('modalProbleme');
+        savantCitation = document.getElementById('savantCitation');
+        savantNom = document.getElementById('savantNom');
+        resultatDivision = document.getElementById('resultatDivision');
+        problemeOutput = document.getElementById('problemeOutput');
+        
+        // Variables pour le panneau pédagogique
+        pedagogicalPanel = document.getElementById('pedagogicalPanel');
+        currentOperation = document.getElementById('current-operation');
+        currentPrinciple = document.getElementById('current-principle');
+        currentObjective = document.getElementById('current-objective');
+        resultatEuclidienEquation = document.getElementById('resultat-euclidien-equation');
+        euclideanResultPanel = document.getElementById('euclidean-result');
+        
+        modalFelicitation.style.display = 'none';
+        modalProbleme.style.display = 'none';
+        euclideanResultPanel.style.display = 'none'; 
+        
+        window.addEventListener('resize', initialiserDivision);
+    }
+
+    function calculerPositionsGeometriques() {
+        const CANVAS_WIDTH = canvas.width;
+        
+        const quotient_len = etapes.length > 0 ? etapes.length : 1; 
+        const diviseur_len = String(diviseur).length;
+        const dividende_len = dividendeStr.length;
+        const longueurDividende = dividende_len * tailleChiffrePx;
+        
+        const longueurMinPotence = Math.max(longueurDividende, diviseur_len * tailleChiffrePx) + POTENCE_SPACING;
+        const longueurQuotientArea = QUOTIENT_START_SPACING + (quotient_len * tailleChiffrePx) + QUOTIENT_END_SPACING;
+        const totalWidthNeeded = longueurMinPotence + longueurQuotientArea;
+        
+        xDividendeStart = (CANVAS_WIDTH - totalWidthNeeded) / 2;
+        if (xDividendeStart < 50) xDividendeStart = 50; 
+             
+        yBaselineChiffres = Y_START + 20; 
+        yLignePotence = yBaselineChiffres + 15; 
+        xPotenceV = xDividendeStart + longueurMinPotence;
+        
+        xQuotientBase = xPotenceV + QUOTIENT_START_SPACING;
+    }
+
+    function calculerEtapes(dividende, diviseur) {
+        let etapes = [];
+        let dividendeStr = String(dividende);
+        let resteActuel = 0;
+        let premierChiffreNonNulTrouve = false;
+        let dernierChiffreUtiliseIndex = -1; 
+        let indexDebutPartie = 0;
+
+        for (let i = 0; i < dividendeStr.length; i++) {
+            let chiffreCourant = parseInt(dividendeStr[i]);
+            let dividendePartiel = resteActuel * 10 + chiffreCourant;
+            
+            if (!premierChiffreNonNulTrouve) {
+                if (dividendePartiel < diviseur && i < dividendeStr.length - 1) {
+                    resteActuel = dividendePartiel;
+                    dernierChiffreUtiliseIndex = i;
+                    indexDebutPartie = i + 1;
+                    continue; 
+                } else {
+                    premierChiffreNonNulTrouve = true;
+                }
+            }
+            
+            dernierChiffreUtiliseIndex = i;
+
+            let quotientChiffre = Math.floor(dividendePartiel / diviseur);
+            let produitSoustrait = quotientChiffre * diviseur;
+            resteActuel = dividendePartiel % diviseur;
+            
+            etapes.push({
+                quotient_chiffre: String(quotientChiffre),
+                produit_soustrait: produitSoustrait,
+                nouveau_reste: resteActuel,
+                index_dernier_chiffre_utilise: dernierChiffreUtiliseIndex,
+                index_debut_partie: indexDebutPartie
+            });
+            indexDebutPartie = dernierChiffreUtiliseIndex + 1;
+        }
+        return etapes;
+    }
+
+    function dessinerStructureBase() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        let xPotenceHFin = xPotenceV + (etapes.length > 0 ? etapes.length : 1) * tailleChiffrePx + QUOTIENT_END_SPACING;
+        
+        ctx.strokeStyle = COULEUR_POTENCE;
+        ctx.lineWidth = 5;
+        
+        ctx.beginPath();
+        ctx.moveTo(xPotenceV, Y_START);
+        ctx.lineTo(xPotenceV, Y_START + 450);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(xPotenceV, yLignePotence);
+        ctx.lineTo(xPotenceHFin, yLignePotence);
+        ctx.stroke();
+        
+        ctx.font = `${TAILLE_ECRITURE}px 'Inter', monospace`;
+        ctx.textBaseline = 'middle';
+
+        ctx.fillStyle = COULEUR_DIVISEUR;
+        ctx.fillText(String(diviseur), xQuotientBase, yBaselineChiffres);
+        
+        ctx.fillStyle = COULEUR_DIVIDENDE;
+        for (let i = 0; i < dividendeStr.length; i++) {
+            ctx.fillText(dividendeStr[i], xDividendeStart + i * tailleChiffrePx, yBaselineChiffres);
+        }
+
+        ctx.font = 'italic 18px Inter';
+        ctx.fillStyle = COULEUR_DIVIDENDE;
+        ctx.fillText("DIVIDENDE (D)", xDividendeStart, yBaselineChiffres - 80);
+        ctx.fillStyle = COULEUR_DIVISEUR;
+        ctx.fillText("DIVISEUR (d)", xQuotientBase, yBaselineChiffres - 80);
+        ctx.fillStyle = COULEUR_QUOTIENT;
+        ctx.fillText("QUOTIENT (Q)", xQuotientBase, yLignePotence + 70);
+
+
+    }
+    
+    function dessinerFlecheAbaissement(xCentre, yStart, yEnd) {
+        ctx.strokeStyle = COULEUR_FLECHE;
+        ctx.lineWidth = 2;
+        ctx.fillStyle = COULEUR_FLECHE; 
+        
+        ctx.beginPath();
+        ctx.moveTo(xCentre, yStart);
+        ctx.lineTo(xCentre, yEnd);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(xCentre, yEnd);
+        ctx.lineTo(xCentre + 5, yEnd - 10);
+        ctx.lineTo(xCentre - 5, yEnd - 10);
+        ctx.closePath();
+        ctx.fill();
+    }
+    
+    function dessinerElementsEtape(i, sousEtapeMax) {
+        if (i >= etapes.length || sousEtapeMax <= 0) return;
+
+        const etape = etapes[i];
+        const yBaseOperation = yLignePotence + 20 + (i * espacementVertical);
+        const indexChiffreUnite = etape["index_dernier_chiffre_utilise"];
+        const xPositionUniteColonne = xDividendeStart + indexChiffreUnite * tailleChiffrePx;
+        
+        const produitStr = String(etape["produit_soustrait"]);
+        const longueurProduitChiffres = produitStr.length;
+        const xProduitUnite = xPositionUniteColonne + tailleChiffrePx - (tailleChiffrePx * 0.1); 
+        const xProduitStart = xProduitUnite - (longueurProduitChiffres * tailleChiffrePx);
+        const xSigneStart = xProduitStart - tailleChiffrePx * 0.8; 
+        const xPositionFinOperation = xPositionUniteColonne + tailleChiffrePx * 0.8;
+        const resteText = String(etape["nouveau_reste"]);
+        const longueurRestePx = resteText.length * tailleChiffrePx;
+        const xResteAlignStart = xPositionUniteColonne + tailleChiffrePx - longueurRestePx;
+        const yReste = yBaseOperation + tailleChiffrePx;
+        
+        ctx.font = `${TAILLE_ECRITURE}px 'Inter', monospace`;
+        ctx.textBaseline = 'middle';
+        
+        // Arc qui sélectionne la partie du dividende
+        if (i < etapeCourante || (i === etapeCourante && sousEtapeMax >= 1)) {
+            const xArcStart = xDividendeStart + etape.index_debut_partie * tailleChiffrePx + tailleChiffrePx/2;
+            const xArcEnd = xPositionUniteColonne + tailleChiffrePx/2;
+            const xArcMid = (xArcStart + xArcEnd) / 2;
+            
+            ctx.strokeStyle = COULEUR_DIVIDENDE;
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(xArcStart, yBaseOperation - 35);
+            ctx.quadraticCurveTo(xArcMid, yBaseOperation - 60, xArcEnd, yBaseOperation - 35);
+            ctx.stroke();
+        }
+
+        // Chiffre du quotient
+        if (sousEtapeMax >= 1) {
+            ctx.fillStyle = COULEUR_QUOTIENT;
+            ctx.fillText(etape["quotient_chiffre"], xQuotientBase + i * tailleChiffrePx, yLignePotence + 20); 
+        }
+
+        // Produit (Multiplication)
+        if (sousEtapeMax >= 2) {
+            ctx.fillStyle = "black";
+            ctx.fillText("-", xSigneStart, yBaseOperation);
+            for (let j = 0; j < produitStr.length; j++) {
+                ctx.fillText(produitStr[j], xProduitStart + j * tailleChiffrePx, yBaseOperation);
+            }
+        }
+        
+        // Ligne de Soustraction
+        if (sousEtapeMax >= 3) {
+            ctx.strokeStyle = "gray";
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(xSigneStart, yBaseOperation + tailleChiffrePx * 0.5);
+            ctx.lineTo(xPositionFinOperation, yBaseOperation + tailleChiffrePx * 0.5);
+            ctx.stroke();
+        }
+        
+        // Reste
+        if (sousEtapeMax >= 4) {
+            ctx.fillStyle = COULEUR_RESTE;
+            if (etape["nouveau_reste"] !== 0 || i === etapes.length - 1) {
+                for (let k = 0; k < resteText.length; k++) {
+                    ctx.fillText(resteText[k], xResteAlignStart + k * tailleChiffrePx, yReste);
+                }
+            }
+        }
+        
+        // Abaissement du chiffre suivant
+        if (i + 1 < dividendeStr.length) {
+            const indexAAbaisser = indexChiffreUnite + 1;
+            const xChiffreAbaisseStart = xDividendeStart + indexAAbaisser * tailleChiffrePx;
+            const xChiffreAbaisseCenter = xChiffreAbaisseStart + tailleChiffrePx / 2;
+
+            const yDebutFleche = yBaselineChiffres + 5; 
+            const yFinFleche = yReste - 10; 
+
+            if (sousEtapeMax >= 5) {
+                dessinerFlecheAbaissement(xChiffreAbaisseCenter, yDebutFleche, yFinFleche);
+            }
+
+            if (sousEtapeMax >= 6) {
+                const chiffreAbaisse = dividendeStr[indexAAbaisser];
+                ctx.fillStyle = COULEUR_DIVIDENDE;
+                ctx.fillText(chiffreAbaisse, xChiffreAbaisseStart, yReste);
+            }
+        }
+    }
+    
+    // NOTE: Les fonctions dessinerExplicationMultiplication, dessinerFlechesAnimees et dessinerFlecheAnimee ont été supprimées.
+
+    function dessinerEtatActuel() {
+        dessinerStructureBase(); 
+
+        for (let i = 0; i < etapes.length; i++) {
+            if (i < etapeCourante) {
+                dessinerElementsEtape(i, MAX_SOUS_ETAPES_PAR_CYCLE);
+            } else if (i === etapeCourante) {
+                dessinerElementsEtape(i, sousEtapeCourante);
+            }
+        }
+        
+        mettreAJourPanneauPedagogique();
+    }
+
+    // Fonction Pédagogique (maintenue et devenue la source unique d'explication)
+    function mettreAJourPanneauPedagogique() {
+        if (etapeCourante >= etapes.length) {
+            euclideanResultPanel.style.display = 'block';
+            const quotientFinal = etapes.map(e => e.quotient_chiffre).join('');
+            const resteFinal = etapes.length > 0 ? etapes[etapes.length - 1]["nouveau_reste"] : dividende;
+
+            currentOperation.textContent = `Terminée ! Reste final : ${resteFinal}`;
+            currentPrinciple.innerHTML = `**Critère d'arrêt :** Le Reste (R = ${resteFinal}) est inférieur au Diviseur (d = ${diviseur}).`;
+            currentObjective.innerHTML = `L'opération est validée par la formule : **D = d × Q + R**`;
+            resultatEuclidienEquation.textContent = `${dividende} = ${diviseur} × ${quotientFinal} + ${resteFinal}`;
+            return;
+        }
+        
+        const etape = etapes[etapeCourante];
+        let restePrecedent = etapeCourante > 0 ? etapes[etapeCourante-1]["nouveau_reste"] : 0;
+        let chiffreAbaisse = dividendeStr[etape.index_dernier_chiffre_utilise];
+        let dividendePartiel = restePrecedent * 10 + parseInt(chiffreAbaisse);
+        
+        // Ajustement des étapes pour une lecture fluide sans la pause du cadre orange
+        switch (sousEtapeCourante) {
+            case 0:
+                currentOperation.textContent = `Démarrage de l'étape ${etapeCourante + 1}`;
+                currentPrinciple.innerHTML = `On prend le **Dividende Partiel** qui est plus grand ou égal au Diviseur (${diviseur}).`;
+                currentObjective.textContent = `Déterminer le premier chiffre du Quotient (Q) en travaillant sur ${dividendePartiel}.`;
+                break;
+            case 1:
+                currentOperation.textContent = `Division: ${dividendePartiel} ÷ ${diviseur} = ${etape.quotient_chiffre}`;
+                currentPrinciple.innerHTML = `**Combien de fois** le Diviseur (${diviseur}) rentre-t-il dans **${dividendePartiel}** ? On inscrit ${etape.quotient_chiffre} au Quotient.`;
+                currentObjective.textContent = `Inscrire le chiffre ${etape.quotient_chiffre} dans le Quotient (Q).`;
+                break;
+            case 2:
+                currentOperation.textContent = `Multiplication: ${etape.quotient_chiffre} × ${diviseur} = ${etape.produit_soustrait}`;
+                currentPrinciple.innerHTML = `On calcule le **Produit** (Q_chiffre × d) pour trouver le nombre à retirer du Dividende Partiel.`;
+                currentObjective.textContent = `Préparer la soustraction.`;
+                break;
+            case 3:
+                currentOperation.textContent = `Soustraction: ${dividendePartiel} - ${etape.produit_soustrait}`;
+                currentPrinciple.innerHTML = `On retire le Produit du Dividende Partiel pour obtenir le **Nouveau Reste**.`;
+                currentObjective.textContent = `Calculer le Reste (R) : il doit toujours être inférieur au Diviseur (${diviseur}).`;
+                break;
+            case 4:
+                currentOperation.textContent = `Nouveau Reste (R): ${etape.nouveau_reste}`;
+                currentPrinciple.innerHTML = `Le Reste est **${etape.nouveau_reste}**. Puisque ${etape.nouveau_reste} < ${diviseur}, l'étape est valide.`;
+                currentObjective.textContent = `Préparer le Reste pour l'opération suivante.`;
+                break;
+            case 5:
+                if (etape.index_dernier_chiffre_utilise + 1 < dividendeStr.length) {
+                    const chiffreAbaisseSuivant = dividendeStr[etape.index_dernier_chiffre_utilise + 1];
+                    currentOperation.textContent = `Abaissement du ${chiffreAbaisseSuivant}`;
+                    currentPrinciple.innerHTML = `On **'abaisse'** le chiffre suivant du Dividende pour créer le nouveau Dividende Partiel (${etape.nouveau_reste}${chiffreAbaisseSuivant}).`;
+                    currentObjective.textContent = `Répéter le processus sur ce nouveau Dividende Partiel.`;
+                } else {
+                    currentOperation.textContent = `Fin de l'opération: Reste ${etape.nouveau_reste}`;
+                    currentPrinciple.innerHTML = `Il n'y a plus de chiffres à abaisser. La division est terminée.`;
+                    currentObjective.textContent = `Passer au résultat final.`;
+                }
+                break;
+            case 6: // Cette étape n'est plus atteinte si la dernière étape est réduite à 4 (pas d'abaissement)
+                currentOperation.textContent = `Prêt pour l'étape ${etapeCourante + 2} !`;
+                currentPrinciple.innerHTML = `Le nouveau Dividende Partiel est prêt. On recommence le cycle : Division, Multiplication, Soustraction.`;
+                currentObjective.textContent = `Trouver le chiffre suivant du Quotient (Q).`;
+                break;
+        }
+        euclideanResultPanel.style.display = 'none';
+    }
+    
+    function initialiserDivision() {
+        if (!ctx) setupDOMVariables(); 
+
+        btnEtape.disabled = true;
+        btnEtape.textContent = "▶️ Étape suivante";
+        
+        const dividendeInput = document.getElementById('dividende').value;
+        const diviseurInput = document.getElementById('diviseur').value;
+        
+        try {
+            dividende = parseInt(dividendeInput);
+            diviseur = parseInt(diviseurInput);
+            dividendeStr = String(dividende);
+        } catch (e) {
+            alert("Veuillez entrer des nombres entiers valides."); 
+            return;
+        }
+
+        if (diviseur <= 0 || isNaN(dividende) || isNaN(diviseur)) {
+            alert("Veuillez vérifier les nombres (Diviseur > 0)."); 
+            return;
+        }
+            
+        etapes = calculerEtapes(dividende, diviseur); 
+        etapeCourante = 0;
+        sousEtapeCourante = 0; 
+        
+        if (etapes.length === 0) {
+            btnEtape.textContent = "✅ Quotient est 0 (division terminée)";
+            dessinerStructureBase();
+            mettreAJourPanneauPedagogique();
+            return;
+        }
+        
+        calculerPositionsGeometriques();
+
+        dessinerEtatActuel();
+
+        btnEtape.disabled = false;
+        const maxSousEtapes = etapeCourante === etapes.length - 1 ? (MAX_SOUS_ETAPES_PAR_CYCLE - 2) : MAX_SOUS_ETAPES_PAR_CYCLE;
+        btnEtape.textContent = `▶️ Étape suivante (1/${maxSousEtapes})`;
+        fermerModal('modalProbleme');
+    }
+
+    function prochaineEtape() {
+        if (etapeCourante >= etapes.length) return; 
+
+        sousEtapeCourante++;
+        
+        const isLastMajorStep = etapeCourante === etapes.length - 1;
+        // La dernière étape n'a pas d'abaissement (sous-étapes 5 et 6 sont sautées).
+        const maxSousEtapesForCurrentCycle = isLastMajorStep ? (MAX_SOUS_ETAPES_PAR_CYCLE - 2) : MAX_SOUS_ETAPES_PAR_CYCLE;
+
+        if (sousEtapeCourante > maxSousEtapesForCurrentCycle) {
+            etapeCourante++;
+            sousEtapeCourante = 1;
+            
+            if (etapeCourante >= etapes.length) {
+                const etapeFinale = etapes[etapes.length - 1];
+                const quotientFinal = etapes.map(e => e.quotient_chiffre).join('');
+
+                btnEtape.textContent = "✅ Division Terminée (Reste : " + String(etapeFinale["nouveau_reste"]) + ")";
+                btnEtape.disabled = true;
+                
+                afficherFelicitation(dividende, diviseur, quotientFinal, etapeFinale["nouveau_reste"]);
+                mettreAJourPanneauPedagogique();
+                return; 
+            }
+        }
+        
+        dessinerEtatActuel();
+
+        updateButtonText();
+    }
+    
+    function updateButtonText() {
+        if (etapeCourante >= etapes.length) return;
+
+        const isLastMajorStep = etapeCourante === etapes.length - 1;
+        const nextMaxSousEtapes = isLastMajorStep ? (MAX_SOUS_ETAPES_PAR_CYCLE - 2) : MAX_SOUS_ETAPES_PAR_CYCLE;
+        
+        const nextSousEtape = sousEtapeCourante;
+        
+        btnEtape.textContent = `▶️ Étape suivante (${nextSousEtape}/${nextMaxSousEtapes})`;
+    }
+
+    function getSavantMessage() {
+        return SAVANT_MESSAGES[Math.floor(Math.random() * SAVANT_MESSAGES.length)];
+    }
+
+    function afficherFelicitation(dividende, diviseur, quotient, resteFinal) {
+        
+        const [savant, citation] = getSavantMessage();
+        
+        savantCitation.textContent = citation;
+        savantNom.textContent = `- ${savant}`;
+        resultatDivision.textContent = `Ton résultat : ${dividende} ÷ ${diviseur} = ${quotient} (Reste ${resteFinal})`;
+        
+        modalFelicitation.style.display = 'flex';
+    }
+
+    function fermerModal(id) {
+        document.getElementById(id).style.display = 'none';
+    }
+
+    function alert(message) {
+        console.error(message);
+        const alertDiv = document.createElement('div');
+        alertDiv.className = 'fixed top-1/4 left-1/2 -translate-x-1/2 bg-red-100 border-2 border-red-500 text-red-800 px-6 py-4 rounded-xl shadow-2xl z-50 text-center font-bold transition-all duration-300 transform scale-105';
+        alertDiv.innerHTML = `⚠️ ERREUR ! ⚠️<br>${message}`;
+        document.body.appendChild(alertDiv);
+        setTimeout(() => alertDiv.remove(), 4000);
+    }
+
+    window.onload = function() {
+        setupDOMVariables();
+        initialiserDivision();
+    };
+
+</script>
+</body>
+</html>
